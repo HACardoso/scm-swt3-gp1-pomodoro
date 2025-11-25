@@ -1,20 +1,31 @@
-FROM python:3.14
+FROM python:3.14-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /aplication
 
-# Caso requirements sejam necessarios ao projeto
-# Adicionamos o requerimento ao arquivo requirements.txt
+# Copia todo o projeto para /aplication
 COPY ./ /aplication
 
+# Garante que exista um requirements.txt (caso não tenha, cria vazio)
+RUN [ -f requirements.txt ] || touch requirements.txt
+
+# Instala dependências Python (se houver)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Como estamos trabalhando com tkinter e interessante
-# confirmarmos a instalacao das dependecias da biblioteca
-RUN apt-get update && apt-get install -y \
-    python3-tk \
-    && rm -rf /var/lib/apt/lists/*
+# Instala dependências do sistema para tkinter / X11
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      python3-tk \
+      tk \
+      tcl \
+      libx11-6 \
+      x11-utils \
+      xauth && \
+    rm -rf /var/lib/apt/lists/*
 
+# Cria diretório de dados (será montado por volume no host)
+RUN mkdir -p /aplication/data
 
 EXPOSE 8080
 
-# Definimos o comando de execucao
 CMD ["python3", "app/app.py"]

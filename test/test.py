@@ -10,6 +10,7 @@ class Test1(unittest.TestCase):
     def setUp(self):
         self.root = tk.Tk()
         self.app = MileageTracker(self.root)
+        self.root.withdraw()
 
     def tearDown(self):
         self.root.destroy()
@@ -17,7 +18,7 @@ class Test1(unittest.TestCase):
 
     def test_window_opens(self):
 
-        print(self.app.root.title())
+        # verifica se a jenela é inicializada corretamente
         self.assertEqual(self.app.root.title(), "Mileage tracker")
 
     def test_smoke_write_and_validate_csv(self):
@@ -59,6 +60,30 @@ class Test1(unittest.TestCase):
             self.assertAlmostEqual(end - start, distance, places=3)
             self.assertGreaterEqual(tolls, 0.0)
             self.assertGreaterEqual(parking, 0.0)
+
+
+    # Teste unitário para verificar função __init__
+    def test_widget_creation_and_type(self):    
+    
+        # Widgets de Entrada (tk.Entry)
+        self.assertIsInstance(self.app.entry_origin, tk.Entry, "Campo Endereço origem não encontrado")
+        self.assertIsInstance(self.app.entry_dest, tk.Entry, "Campo Endereço destino não encontrado")
+        self.assertIsInstance(self.app.entry_start, tk.Entry, "Campo Hodômetro inicial não encontrado")
+        self.assertIsInstance(self.app.entry_end, tk.Entry, "Campo Hodômetro final não encontrado")
+        self.assertIsInstance(self.app.entry_tolls, tk.Entry, "Cmpo Pedágio não encontrado")
+        self.assertIsInstance(self.app.entry_parking, tk.Entry, "Campo Estacionamento não encontrado")
+        
+        # Botão
+        self.assertIsInstance(self.app.btn_save, tk.Button, "Botão Salvar Viagem não encontrado")
+        
+        # 3. Rótulo de Status
+        self.assertIsInstance(self.app.status, tk.Label, "Campo status não encontrado")
+        
+        #Listbox de Registros
+        self.assertIsInstance(self.app.listbox, tk.Listbox, "Campo ultimos registros não encontrado")
+            
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,13 +2,118 @@ import tkinter as tk
 from tkinter import messagebox
 import csv
 import os
+from datetime import datetime
+
+class ExpenseCalculator:
+    """
+    Classe responsável por calcular as despesas consolidadas de uma viagem.
+    Consolida o custo total baseado na quilometragem, pedágios e taxas de estacionamento.
+    """
+    
+    # Taxa padrão por quilômetro (em R$)
+    DEFAULT_KM_RATE = 0.50
+    
+    def __init__(self, km_rate=None):
+        """
+        Inicializa o calculador de despesas.
+        
+        Args:
+            km_rate (float): Taxa de reembolso por km (padrão: R$ 0.50/km)
+        """
+        self.km_rate = km_rate if km_rate is not None else self.DEFAULT_KM_RATE
+    
+    def calculate_km_expense(self, distance):
+        """
+        Calcula a despesa baseada na quilometragem.
+        
+        Args:
+            distance (float): Distância em km
+            
+        Returns:
+            float: Despesa de quilometragem em R$
+        """
+        if distance < 0:
+            raise ValueError("Distância não pode ser negativa")
+        return round(distance * self.km_rate, 2)
+    
+    def calculate_total_expense(self, distance, tolls=0, parking=0):
+        """
+        Calcula a despesa total consolidada.
+        
+        Args:
+            distance (float): Distância em km
+            tolls (float): Valor de pedágios em R$
+            parking (float): Valor de estacionamento em R$
+            
+        Returns:
+            dict: Dicionário com detalhamento das despesas
+                {
+                    'distance_km': float,
+                    'km_expense': float,
+                    'tolls': float,
+                    'parking': float,
+                    'total': float
+                }
+        """
+        try:
+            tolls = float(tolls) if tolls else 0
+            parking = float(parking) if parking else 0
+            distance = float(distance)
+            
+            if distance < 0:
+                raise ValueError("Distância não pode ser negativa")
+            if tolls < 0:
+                raise ValueError("Pedágio não pode ser negativo")
+            if parking < 0:
+                raise ValueError("Estacionamento não pode ser negativo")
+            
+            km_expense = self.calculate_km_expense(distance)
+            total = round(km_expense + tolls + parking, 2)
+            
+            return {
+                'distance_km': round(distance, 2),
+                'km_expense': km_expense,
+                'tolls': round(tolls, 2),
+                'parking': round(parking, 2),
+                'total': total
+            }
+        except ValueError as e:
+            raise ValueError(f"Erro no cálculo de despesas: {str(e)}")
+    
+    def get_expense_summary(self, distance, tolls=0, parking=0):
+        """
+        Retorna um resumo formatado das despesas.
+        
+        Args:
+            distance (float): Distância em km
+            tolls (float): Valor de pedágios em R$
+            parking (float): Valor de estacionamento em R$
+            
+        Returns:
+            str: String formatada com resumo das despesas
+        """
+        expense = self.calculate_total_expense(distance, tolls, parking)
+        summary = (
+            f"=== RESUMO DE DESPESAS ===\n"
+            f"Distância: {expense['distance_km']:.2f} km\n"
+            f"Despesa km: R$ {expense['km_expense']:.2f}\n"
+            f"Pedágios: R$ {expense['tolls']:.2f}\n"
+            f"Estacionamento: R$ {expense['parking']:.2f}\n"
+            f"─────────────────────────\n"
+            f"TOTAL: R$ {expense['total']:.2f}"
+        )
+        return summary
+
 
 class MileageTracker:
     def __init__(self, root):
         # Criacao da janela
         self.root = root
         root.title("Mileage tracker")
-        root.geometry("500x380")
+        root.geometry("600x480")
+        
+        # Inicializa o calculador de despesas com taxa padrão de R$ 0.50/km
+        self.expense_calculator = ExpenseCalculator(km_rate=0.50)
 
         # Campos do formulário
         frame = tk.Frame(root, padx=10, pady=10)
@@ -43,11 +148,17 @@ class MileageTracker:
 
         self.status = tk.Label(frame, text="", fg="green")
         self.status.grid(row=7, column=0, columnspan=2)
+        
+        # Área para visualizar resumo de despesas
+        tk.Label(frame, text="Resumo de Despesas:", font=("Arial", 9, "bold")).grid(row=8, column=0, sticky='w', pady=(10,0))
+        self.expense_text = tk.Text(frame, width=80, height=5)
+        self.expense_text.grid(row=9, column=0, columnspan=2, pady=2)
+        self.expense_text.config(state='disabled')  # Somente leitura
 
         # area para visualizar últimos registros
-        tk.Label(frame, text="Últimos registros:").grid(row=8, column=0, sticky='w', pady=(10,0))
-        self.listbox = tk.Listbox(frame, width=80, height=6)
-        self.listbox.grid(row=9, column=0, columnspan=2, pady=2)
+        tk.Label(frame, text="Últimos registros:", font=("Arial", 9, "bold")).grid(row=10, column=0, sticky='w', pady=(10,0))
+        self.listbox = tk.Listbox(frame, width=80, height=5)
+        self.listbox.grid(row=11, column=0, columnspan=2, pady=2)
 
         # garante pasta de dados e carrega existentes
         self.data_dir = os.path.join(os.getcwd(), "data")

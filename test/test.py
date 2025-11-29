@@ -196,7 +196,18 @@ class TestExpenseCalculatorEdgeCases(unittest.TestCase):
     """Testes para casos extremos"""
     
     def setUp(self):
+        # cria também uma instância mínima da UI para os testes de widgets
+        self.root = tk.Tk()
+        self.app = MileageTracker(self.root)
+        self.root.withdraw()
         self.calculator = ExpenseCalculator(km_rate=0.50)
+
+    def tearDown(self):
+        # garante que a raiz do Tk seja destruída após cada teste
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
     
     def test_very_large_distance(self):
         """Testa com distância muito grande"""

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import csv
+from decimal import Decimal, ROUND_HALF_UP
 import os
 from datetime import datetime
 
@@ -34,7 +35,11 @@ class ExpenseCalculator:
         """
         if distance < 0:
             raise ValueError("Distância não pode ser negativa")
-        return round(distance * self.km_rate, 2)
+        # Use Decimal for deterministic monetary rounding (ROUND_HALF_UP)
+        d_distance = Decimal(str(distance))
+        d_rate = Decimal(str(self.km_rate))
+        km_cost = (d_distance * d_rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return float(km_cost)
     
     def calculate_total_expense(self, distance, tolls=0, parking=0):
         """
@@ -68,7 +73,25 @@ class ExpenseCalculator:
                 raise ValueError("Estacionamento não pode ser negativo")
             
             km_expense = self.calculate_km_expense(distance)
-            total = round(km_expense + tolls + parking, 2)
+            # Use Decimal for rounding monetary values to avoid floating point
+            d_distance = Decimal(str(distance))
+            d_tolls = Decimal(str(tolls)) if str(tolls) != "" else Decimal('0')
+            d_parking = Decimal(str(parking)) if str(parking) != "" else Decimal('0')
+
+            km_expense = Decimal(str(self.calculate_km_expense(float(d_distance))))
+
+            d_tolls = d_tolls.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            d_parking = d_parking.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            total = (km_expense + d_tolls + d_parking).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            return {
+                'distance_km': float(d_distance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+                'km_expense': float(km_expense),
+                'tolls': float(d_tolls),
+                'parking': float(d_parking),
+                'total': float(total)
+            }
             
             return {
                 'distance_km': round(distance, 2),
@@ -103,8 +126,17 @@ class ExpenseCalculator:
             f"TOTAL: R$ {expense['total']:.2f}"
         )
         return summary
-import requests
-from dotenv import load_dotenv
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # fallback no-op if python-dotenv is not installed
+    def load_dotenv(*args, **kwargs):
+        return None
 
 
 class MileageTracker:
@@ -125,6 +157,14 @@ class MileageTracker:
             print(
                 "Aviso: GOOGLE_MAPS_API_KEY não definida. "
                 "Distâncias serão calculadas apenas pelo hodômetro."
+            )
+
+        # Se requests não estiver disponível, avisamos — o método que usa a API irá
+        # lançar um RuntimeError caso alguém tente usar a integração.
+        if requests is None:
+            print(
+                "Aviso: pacote 'requests' não encontrado. "
+                "A integração com Google Maps ficará indisponível."
             )
 
         # Campos do formulário
@@ -167,16 +207,10 @@ class MileageTracker:
         self.expense_text.grid(row=9, column=0, columnspan=2, pady=2)
         self.expense_text.config(state='disabled')  # Somente leitura
 
-        # area para visualizar últimos registros
-        tk.Label(frame, text="Últimos registros:", font=("Arial", 9, "bold")).grid(row=10, column=0, sticky='w', pady=(10,0))
-        self.listbox = tk.Listbox(frame, width=80, height=5)
-        self.listbox.grid(row=11, column=0, columnspan=2, pady=2)
         # área para visualizar últimos registros
-        tk.Label(frame, text="Últimos registros:").grid(
-            row=8, column=0, sticky='w', pady=(10, 0)
-        )
+        tk.Label(frame, text="Últimos registros:", font=("Arial", 9, "bold")).grid(row=10, column=0, sticky='w', pady=(10,0))
         self.listbox = tk.Listbox(frame, width=80, height=6)
-        self.listbox.grid(row=9, column=0, columnspan=2, pady=2)
+        self.listbox.grid(row=11, column=0, columnspan=2, pady=2)
 
         # garante pasta de dados e carrega existentes
         self.data_dir = os.path.join(os.getcwd(), "data")
@@ -227,6 +261,14 @@ class MileageTracker:
 
         try:
             resp = requests.post(url, headers=headers, json=body, timeout=10)
+        except TypeError:
+            # requests is None or not callable
+            raise RuntimeError(
+                "A biblioteca 'requests' não está disponível. Instale-a com: pip install requests"
+            )
+        except Exception as e:
+            # requests may raise RequestException, handle below
+            raise
         except requests.RequestException as e:
             # Erros de rede (sem internet, DNS, timeout, etc.)
             raise RuntimeError(f"Falha de comunicação com a API do Google Maps: {e}")
@@ -308,6 +350,23 @@ class MileageTracker:
             )
 
         # escreve no CSV (adiciona header se não existir)
+        # Calcula as despesas usando ExpenseCalculator
+        try:
+            expense_details = self.expense_calculator.calculate_total_expense(
+                distance, tolls_f, parking_f
+            )
+            expense_summary = self.expense_calculator.get_expense_summary(
+                distance, tolls_f, parking_f
+            )
+            # Exibe o resumo de despesas na UI
+            self.expense_text.config(state='normal')
+            self.expense_text.delete(1.0, tk.END)
+            self.expense_text.insert(1.0, expense_summary)
+            self.expense_text.config(state='disabled')
+        except ValueError as e:
+            messagebox.showerror("Erro", str(e))
+            return
+
         new_row = [
             origin,
             dest,
@@ -316,6 +375,8 @@ class MileageTracker:
             f"{distance:.1f}",
             f"{tolls_f:.2f}",
             f"{parking_f:.2f}",
+            f"{expense_details['km_expense']:.2f}",
+            f"{expense_details['total']:.2f}",
         ]
         write_header = not os.path.exists(self.csv_path)
         with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
@@ -329,6 +390,8 @@ class MileageTracker:
                     "distance",
                     "tolls",
                     "parking",
+                    "km_expense",
+                    "total_expense",
                 ])
             writer.writerow(new_row)
 
@@ -350,6 +413,15 @@ class MileageTracker:
         self.entry_end.delete(0, tk.END)
         self.entry_tolls.delete(0, tk.END)
         self.entry_parking.delete(0, tk.END)
+    
+    def display_expense_summary(self, summary: str):
+        """
+        Exibe o resumo de despesas na área de texto.
+        """
+        self.expense_text.config(state='normal')
+        self.expense_text.delete(1.0, tk.END)
+        self.expense_text.insert(1.0, summary)
+        self.expense_text.config(state='disabled')
 
 
 if __name__ == '__main__':

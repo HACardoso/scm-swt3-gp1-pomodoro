@@ -167,6 +167,16 @@ class MileageTracker:
                 "A integração com Google Maps ficará indisponível."
             )
 
+        # Configuração da API do Google Maps
+        load_dotenv()
+        self.api_key = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
+        if not self.api_key:
+            # Não é erro fatal: o sistema continua usando apenas o hodômetro
+            print(
+                "Aviso: GOOGLE_MAPS_API_KEY não definida. "
+                "Distâncias serão calculadas apenas pelo hodômetro."
+            )
+
         # Campos do formulário
         frame = tk.Frame(root, padx=10, pady=10)
         frame.pack(fill='both', expand=True)

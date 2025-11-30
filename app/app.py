@@ -177,6 +177,14 @@ class MileageTracker:
                 "Distâncias serão calculadas apenas pelo hodômetro."
             )
 
+        # Se requests não estiver disponível, avisamos — o método que usa a API irá
+        # lançar um RuntimeError caso alguém tente usar a integração.
+        if requests is None:
+            print(
+                "Aviso: pacote 'requests' não encontrado. "
+                "A integração com Google Maps ficará indisponível."
+            )
+
         # Campos do formulário
         frame = tk.Frame(root, padx=10, pady=10)
         frame.pack(fill='both', expand=True)

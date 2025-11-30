@@ -67,7 +67,7 @@ A ferramenta automatiza o cálculo da distância e permite a exportação de tod
   - Se não for usar a API do Google Maps dentro do container, remova `--env-file .env`.
 
 - **Windows (VcXsrv / Xming / Docker Desktop)**
-  - Inicie o VcXsrv (ou Xming) com “Disable access control” habilitado (para testes locais).
+  - Inicie o VcXsrv + XLaunch (ou Xming) com “Disable access control” habilitado (para testes locais).
   - No PowerShell, no diretório do projeto:
     ```powershell
     docker run -e DISPLAY=host.docker.internal:0.0 `
@@ -155,9 +155,9 @@ Os testes da aplicação encontram-se no diretório test. Execute:
 ```
 python3 -m unittest discover -s test
 ```
-## Exemplo de uso com Google Maps
+## Exemplo de uso com Google Maps + resumo de despesas
 
-![Tela do Mileage Tracker mostrando distância via Google Maps](docs/img/mileage-gmaps-example.png)
+![Tela do Mileage Tracker mostrando distância via Google Maps + despesas](docs/img/mileage-gmaps-expenses-example.png)
 
 ## Observações
 - A aplicação grava em /aplication/data/trips.csv dentro do container; ao mapear ./data do host para /aplication/data, os registros ficam no host.

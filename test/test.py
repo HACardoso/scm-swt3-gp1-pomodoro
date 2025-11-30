@@ -1,5 +1,6 @@
 import unittest
 import tkinter as tk
+from unittest.mock import MagicMock, patch
 from app.app import MileageTracker, ExpenseCalculator
 import tempfile
 import os
@@ -431,6 +432,30 @@ class TestGoogleMapsDistance(unittest.TestCase):
             self.app.get_distance_from_gmaps("Origem X", "Destino Y")
 
         self.assertIn("não retornou nenhuma rota", str(ctx.exception))
+
+
+
+
+    # Teste unitário para verificar função __init__
+    def test_widget_creation_and_type(self):    
+    
+        # Widgets de Entrada (tk.Entry)
+        self.assertIsInstance(self.app.entry_origin, tk.Entry, "Campo Endereço origem não encontrado")
+        self.assertIsInstance(self.app.entry_dest, tk.Entry, "Campo Endereço destino não encontrado")
+        self.assertIsInstance(self.app.entry_start, tk.Entry, "Campo Hodômetro inicial não encontrado")
+        self.assertIsInstance(self.app.entry_end, tk.Entry, "Campo Hodômetro final não encontrado")
+        self.assertIsInstance(self.app.entry_tolls, tk.Entry, "Cmpo Pedágio não encontrado")
+        self.assertIsInstance(self.app.entry_parking, tk.Entry, "Campo Estacionamento não encontrado")
+        
+        # Botão
+        self.assertIsInstance(self.app.btn_save, tk.Button, "Botão Salvar Viagem não encontrado")
+        
+        # 3. Rótulo de Status
+        self.assertIsInstance(self.app.status, tk.Label, "Campo status não encontrado")
+        
+        #Listbox de Registros
+        self.assertIsInstance(self.app.listbox, tk.Listbox, "Campo ultimos registros não encontrado")
+            
 
 
 
